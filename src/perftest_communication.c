@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2750,6 +2751,19 @@ error:
 	return error_handler(error_message);
 }
 
+static void print_sockaddr(const char* label, struct sockaddr* addr) {
+    if (addr->sa_family == AF_INET) {
+        char ip_str[INET_ADDRSTRLEN];
+        uint16_t port;
+        struct sockaddr_in *addr_in = (struct sockaddr_in *)addr;
+        inet_ntop(AF_INET, &(addr_in->sin_addr), ip_str, INET_ADDRSTRLEN);
+        port = ntohs(addr_in->sin_port); // 网络字节序转主机序
+        printf("%s: %s:%d\n", label, ip_str, port);
+    } else {
+        printf("%s: unknown %d\n", label, (int)(addr->sa_family));
+    }
+}
+
 /******************************************************************************
 *
 ******************************************************************************/
@@ -2774,6 +2788,8 @@ int rdma_cm_server_connection(struct pingpong_context *ctx,
 			"Failed to get RDMA CM address - Error: %s.", gai_strerror(rc));
 		goto destroy_id;
 	}
+	struct sockaddr* addr = ctx->cma_master.rai->ai_src_addr;
+	print_sockaddr("bind", addr);
 
 	rc = rdma_bind_addr(listen_id, ctx->cma_master.rai->ai_src_addr);
 	if (rc) {
